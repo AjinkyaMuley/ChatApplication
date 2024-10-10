@@ -20,51 +20,47 @@ const databaseURL = process.env.DATABASE_URL;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
+// Update CORS configuration for production
 app.use(cors({
-     origin:[process.env.ORIGIN],
-     methods:["GET","POST","PUT","PATCH","DELETE"],
-     credentials:true
-}))
+    origin: process.env.NODE_ENV === 'production' 
+        ? process.env.ORIGIN 
+        : "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true
+}));
 
+// Static file serving
 app.use('/uploads/profile', express.static(path.join(__dirname, 'uploads/profile')));
 app.use('/uploads/files', express.static(path.join(__dirname, 'uploads/files')));
- 
+
 app.use(cookieParser())
 app.use(express.json())
 
-app.use('/api/auth',authRoutes)
-app.use('/api/contacts',contactsRoutes)
-app.use('/api/messages',messagesRoutes)
-app.use('/api/channel',channelRoutes)
+// API routes
+app.use('/api/auth', authRoutes)
+app.use('/api/contacts', contactsRoutes)
+app.use('/api/messages', messagesRoutes)
+app.use('/api/channel', channelRoutes)
 
+// Remove the deployment section since Vercel handles it differently
+// Instead, just serve the API endpoints
 
-// --------------------------DEPLOYEMENT---------------
+app.get('/', (req, res) => {
+    res.send('API running successfully');
+});
 
-const __dirname1 = path.resolve();
-
-if (process.env.NODE_ENV === 'production'){
-
-    app.use(express.static(path.join(__dirname1,'/client/dist')))
-
-    app.get('*',(req,res) => {
-        res.sendFile(path.resolve(__dirname1,'client','dist','index.html'))
-    })
-}
-else{
-    app.get('/',(req,res) => {
-        res.send('API running succesfully');
-    })
-}
-
-// --------------------------DEPLOYEMENT---------------
-
-const server = app.listen(port,()=>{
-    console.log(`Server is running on port 3000`)
-})
-
-setupSocket(server)
-
+// Connect to MongoDB
 mongoose.connect(databaseURL)
-    .then(()=>console.log('DB connection succesfull'))
-    .catch(err=>console.log(err.message))
+    .then(() => console.log('DB connection successful'))
+    .catch(err => console.log(err.message))
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+    const server = app.listen(port, () => {
+        console.log(`Server is running on port ${port}`)
+    });
+    setupSocket(server);
+}
+
+// For Vercel
+export default app;
